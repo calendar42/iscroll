@@ -45,12 +45,16 @@ function iScroll (el, options) {
 		pullToRefresh: false,
 		pullDownLabel: ['Pull down to refresh...', 'Release to refresh...', 'Loading...'],
 		pullUpLabel: ['Pull up to refresh...', 'Release to refresh...', 'Loading...'],
+		pullLeftLabel: ['Pull left to refresh...', 'Release to refresh...', 'Loading...'],
 		onPullDown: function () {},
 		onPullUp: function () {},
+		onPullLeft: function () {},
 		onScrollStart: null,
 		onScrollEnd: null,
 		onZoomStart: null,
 		onZoomEnd: null,
+		nested: [],
+		isNested: false,
 		checkDOMChange: false		// Experimental
 	};
 
@@ -77,6 +81,7 @@ function iScroll (el, options) {
 	
 	that.pullDownToRefresh = that.options.pullToRefresh == 'down' || that.options.pullToRefresh == 'both';
 	that.pullUpToRefresh = that.options.pullToRefresh == 'up' || that.options.pullToRefresh == 'both';
+	that.pullLeftToRefresh = that.options.pullToRefresh == 'left' || that.options.pullToRefresh == 'all';
 	
 	if (that.pullDownToRefresh) {
 		div = doc.createElement('div');
@@ -96,6 +101,16 @@ function iScroll (el, options) {
 		that.options.bounce = true;
 		that.pullUpEl = div;
 		that.pullUpLabel = div.getElementsByTagName('span')[1];
+	}
+
+	if (that.pullLeftToRefresh) {
+		div = doc.createElement('div');
+		div.className = 'iScrollPullLeft';
+		div.innerHTML = '<span class="iScrollPullLeftIcon"></span><span class="iScrollPullLeftLabel">' + that.options.pullLeftLabel[0] + '</span>\n';
+		that.scroller.appendChild(div);
+		that.options.bounce = true;
+		that.pullLeftEl = div;
+		that.pullLeftLabel = div.getElementsByTagName('span')[1];
 	}
 
 	that.refresh();
@@ -129,9 +144,11 @@ iScroll.prototype = {
 	scale: 1, lastScale: 1,
 	contentReady: true,
 	
-	handleEvent: function (e) {
+	handleEvent: function (e, byParent) {
 		var that = this;
-
+    
+    if (that.options.isNested && !byParent) { return; }
+    
 		switch(e.type) {
 			case START_EV: that._start(e); break;
 			case MOVE_EV: that._move(e); break;
@@ -145,6 +162,11 @@ iScroll.prototype = {
 			case 'gesturecancel': that._gestEnd(e); break;
 			case 'mousewheel': that._wheel(e); break;
 		}
+
+		for (var i = 0; i < that.options.nested.length; i++) {
+		  that.options.nested[i].handleEvent(e, true);
+		}
+		
 	},
 	
 	_scrollbar: function (dir) {
@@ -278,7 +300,7 @@ iScroll.prototype = {
 		var that = this,
 			point = hasTouch ? e.changedTouches[0] : e,
 			matrix;
-
+    
 		that.moved = false;
 
 		e.preventDefault();
@@ -360,6 +382,17 @@ iScroll.prototype = {
 		// Slow down if outside of the boundaries
 		if (newX > 0 || newX < that.maxScrollX) {
 			newX = that.options.bounce ? that.x + (deltaX / 2.4) : newX >= 0 || that.maxScrollX >= 0 ? 0 : that.maxScrollX;
+
+			// Pull left to refresh
+			if (that.options.pullToRefresh && that.contentReady) {
+  			if (that.pullLeftToRefresh && newX > that.offsetLeft) {
+  				that.pullLeftEl.className = 'iScrollPullLeft flip';
+  				that.pullLeftLabel.innerText = that.options.pullLeftLabel[1];
+  			} else if (that.pullLeftToRefresh && that.pullLeftEl.className.match('flip')) {
+  				that.pullLeftEl.className = 'iScrollPullLeft';
+  				that.pullLeftLabel.innerText = that.options.pullLeftLabel[0];
+  			}
+      }
 		}
 		if (newY > 0 || newY < that.maxScrollY) { 
 			newY = that.options.bounce ? that.y + (deltaY / 2.4) : newY >= 0 || that.maxScrollY >= 0 ? 0 : that.maxScrollY;
@@ -485,6 +518,16 @@ iScroll.prototype = {
 			that.refresh();
 			that.contentReady = false;
 			that.options.onPullUp();
+		}
+
+		if (that.pullLeftToRefresh && that.contentReady && that.pullLeftEl.className.match('flip')) {
+			that.pullLeftEl.className = 'iScrollPullLeft loading';
+			that.pullLeftLabel.innerText = that.options.pullLeftLabel[2];
+			that.scroller.style.marginBottom = '0';
+			that.offsetLeft = 0;
+			that.refresh();
+			that.contentReady = false;
+			that.options.onPullLeft();
 		}
 
 		if (duration < 300 && that.options.momentum) {
@@ -812,6 +855,9 @@ iScroll.prototype = {
 		if (that.pullUpToRefresh) {
 			that.pullUpEl.parentNode.removeChild(that.pullUpEl);
 		}
+		if (that.pullLeftToRefresh) {
+			that.pullLeftEl.parentNode.removeChild(that.pullLeftEl);
+		}
 
 		// Remove the scrollbars
 		that.hScrollbar = false;
@@ -872,6 +918,21 @@ iScroll.prototype = {
 			} else if (!loading) {
 				that.offsetTop = that.pullUpEl.offsetHeight;
 				that.scroller.style.marginBottom = -that.offsetTop + 'px';
+			}
+		}
+
+		if (that.pullLeftToRefresh) {
+			loading = that.pullLeftEl.className.match('loading');
+			if (loading && !that.contentReady) {
+				oldHeight = that.scrollerH;
+				that.contentReady = true;
+				that.pullLeftEl.className = 'iScrollPullLeft';
+				that.pullLeftLabel.innerText = that.options.pullLeftLabel[0];
+				that.offsetLeft = that.pullLeftEl.offsetHeight;
+				that.scroller.style.marginBottom = -that.offsetLeft + 'px';
+			} else if (!loading) {
+				that.offsetLeft = that.pullLeftEl.offsetHeight;
+				that.scroller.style.marginBottom = -that.offsetLeft + 'px';
 			}
 		}
 
