@@ -55,6 +55,7 @@ function iScroll (el, options) {
 		onZoomEnd: null,
 		nested: [],
 		isNested: false,
+		dontScroll: false,
 		checkDOMChange: false		// Experimental
 	};
 
@@ -144,10 +145,9 @@ iScroll.prototype = {
 	scale: 1, lastScale: 1,
 	contentReady: true,
 	
-	handleEvent: function (e, byParent) {
+	handleEvent: function (e, byParrent) {
 		var that = this;
-    
-    if (that.options.isNested && !byParent) { return; }
+    if (that.options.isNested && !byParrent|| that.options.dontScroll) { return; }
     
 		switch(e.type) {
 			case START_EV: that._start(e); break;
@@ -163,9 +163,9 @@ iScroll.prototype = {
 			case 'mousewheel': that._wheel(e); break;
 		}
 
-		for (var i = 0; i < that.options.nested.length; i++) {
-		  that.options.nested[i].handleEvent(e, true);
-		}
+    for (var i = 0; i < that.options.nested.length; i++) {
+      that.options.nested[i].handleEvent(e, true);
+    }
 		
 	},
 	
@@ -362,6 +362,7 @@ iScroll.prototype = {
 			that._bind(END_EV);
 			that._bind(CANCEL_EV);
 //		}, 0);
+
 	},
 	
 	_move: function (e) {
@@ -446,6 +447,7 @@ iScroll.prototype = {
 			that.startX = that.x;
 			that.startY = that.y;
 		}
+
 	},
 	
 	_end: function (e) {
@@ -882,6 +884,11 @@ iScroll.prototype = {
 			that._unbind('gestureend');
 			that._unbind('gesturecancel');
 		}
+
+  	if (!hasTouch) {
+  		that._unbind('mousewheel');
+  	}
+
 	},
 	
 	refresh: function () {
@@ -1022,6 +1029,7 @@ iScroll.prototype = {
 		that._transitionTime(time);
 		that._pos(x, y);
 		if (!time) setTimeout(function () { that._transitionEnd(); }, 0);
+		
 	},
 
 	scrollToElement: function (el, time) {
