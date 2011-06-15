@@ -730,9 +730,12 @@ iScroll.prototype = {
 	},
 	
 	_wheel: function (e) {
-		var that = this,
-			deltaX = that.x + e.wheelDeltaX / 12,
-			deltaY = that.y + e.wheelDeltaY / 12;
+		var that = this, deltaX, deltaY;
+		
+		deltaAdjust = /chrome/gi.test(navigator.userAgent) ? 1 : 12;
+
+    deltaX = that.x + e.wheelDeltaX / deltaAdjust,
+    deltaY = that.y + e.wheelDeltaY / deltaAdjust;
 
 		if (deltaX > 0) deltaX = 0;
 		else if (deltaX < that.maxScrollX) deltaX = that.maxScrollX;
