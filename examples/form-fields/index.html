@@ -13,39 +13,20 @@
 
 var myScroll;
 function loaded() {
-	myScroll = new iScroll('wrapper');
+	myScroll = new iScroll('wrapper', {
+		useTransform: false,
+		onBeforeScrollStart: function (e) {
+			var target = e.target;
+			while (target.nodeType != 1) target = target.parentNode;
+
+			if (target.tagName != 'SELECT' && target.tagName != 'INPUT' && target.tagName != 'TEXTAREA')
+				e.preventDefault();
+		}
+	});
 }
 
 document.addEventListener('touchmove', function (e) { e.preventDefault(); }, false);
-
-/* * * * * * * *
- *
- * Use this for high compatibility (iDevice + Android)
- *
- */
-document.addEventListener('DOMContentLoaded', setTimeout(function () { loaded(); }, 200), false);
-/*
- * * * * * * * */
-
-
-/* * * * * * * *
- *
- * Use this for iDevice only
- *
- */
-//document.addEventListener('DOMContentLoaded', loaded, false);
-/*
- * * * * * * * */
-
-
-/* * * * * * * *
- *
- * Use this if nothing else works
- *
- */
-//window.addEventListener('load', setTimeout(function () { loaded(); }, 200), false);
-/*
- * * * * * * * */
+document.addEventListener('DOMContentLoaded', loaded, false);
 
 </script>
 
@@ -146,13 +127,13 @@ body {
 <div id="wrapper">
 	<div id="scroller">
 		<ul id="thelist">
-			<li>Pretty row 1</li>
+			<li><input type="text"></li>
 			<li>Pretty row 2</li>
-			<li>Pretty row 3</li>
+			<li><input type="radio"></li>
 			<li>Pretty row 4</li>
-			<li>Pretty row 5</li>
+			<li><input type="checkbox"></li>
 			<li>Pretty row 6</li>
-			<li>Pretty row 7</li>
+			<li><select><option>opt</option></select></li>
 			<li>Pretty row 8</li>
 			<li>Pretty row 9</li>
 			<li>Pretty row 10</li>
