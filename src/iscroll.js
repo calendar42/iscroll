@@ -48,7 +48,7 @@ var m = Math,
 	trnClose = has3d ? ',0)' : ')',
 
 	// Constructor
-	iScroll = function (el, options) {
+	iScroll = function (el, options, nestedChilds) {
 		var that = this,
 			doc = document,
 			i;
@@ -56,6 +56,7 @@ var m = Math,
 		that.wrapper = typeof el == 'object' ? el : doc.getElementById(el);
 		that.wrapper.style.overflow = 'hidden';
 		that.scroller = that.wrapper.children[0];
+		that.nestedChilds = typeof nestedChilds === 'object' ? nestedChilds : [];
 
 		// Default options
 		that.options = {
@@ -104,10 +105,6 @@ var m = Math,
 			onZoom: null,
 			onZoomEnd: null,
 			
-			// Nested scroll divs support
-      nested: [],
-      isNested: false,
-
       // Support for disabeling scrolling
       dontScroll: false
     };
@@ -130,6 +127,19 @@ var m = Math,
 		
 		if (that.options.useTransform) that.scroller.style[vendor + 'Transform'] = trnOpen + '0,0' + trnClose;
 		else that.scroller.style.cssText += ';position:absolute;top:0;left:0';
+
+    if (that.nestedChilds) {
+  		that.nestedChilds.forEach(function (n) {
+    		// Set some default styles
+    		n.style[vendor + 'TransitionProperty'] = that.options.useTransform ? '-' + vendor.toLowerCase() + '-transform' : 'top left';
+    		n.style[vendor + 'TransitionDuration'] = '0';
+    		n.style[vendor + 'TransformOrigin'] = '0 0';
+    		if (that.options.useTransition) n.style[vendor + 'TransitionTimingFunction'] = 'cubic-bezier(0.33,0.66,0.66,1)';
+		
+    		if (that.options.useTransform) n.style[vendor + 'Transform'] = trnOpen + '0,0' + trnClose;
+    		else n.style.cssText += ';position:absolute;top:0;left:0';
+  		});
+    }
 
 		if (that.options.useTransition) that.options.fixedScrollbar = true;
 
@@ -161,10 +171,10 @@ iScroll.prototype = {
 	aniTime: null,
 	wheelZoomCount: 0,
 	
-	handleEvent: function (e, byParrent) {
+	handleEvent: function (e) {
 		var that = this;
 
-		if (that.options.isNested && !byParrent || that.options.dontScroll) { return; }
+		if (that.options.dontScroll) { return; }
 
 		switch(e.type) {
 			case START_EV:
@@ -180,9 +190,6 @@ iScroll.prototype = {
 			case 'webkitTransitionEnd': that._transitionEnd(e); break;
 		}
 
-    for (var i = 0; i < that.options.nested.length; i++) {
-      that.options.nested[i].handleEvent(e, true);
-    }	
   },
 	
 	_checkDOMChanges: function () {
@@ -258,14 +265,28 @@ iScroll.prototype = {
 	_pos: function (x, y) {
 		x = this.hScroll ? x : 0;
 		y = this.vScroll ? y : 0;
+		var that = this;
 
 		if (this.options.useTransform) {
 			this.scroller.style[vendor + 'Transform'] = trnOpen + x + 'px,' + y + 'px' + trnClose + ' scale(' + this.scale + ')';
+
+      if (that.nestedChilds) {
+        this.nestedChilds.forEach(function (n) {
+  			  n.style[vendor + 'Transform'] = trnOpen + x + 'px,' + y + 'px' + trnClose + ' scale(' + that.scale + ')';
+        });
+      }
 		} else {
 			x = m.round(x);
 			y = m.round(y);
 			this.scroller.style.left = x + 'px';
 			this.scroller.style.top = y + 'px';
+
+      if (that.nestedChilds) {
+        this.nestedChilds.forEach(function (n) {
+    			n.style.left = x + 'px';
+    			n.style.top = y + 'px';
+        });
+      }
 		}
 
 		this.x = x;
@@ -356,6 +377,7 @@ iScroll.prototype = {
 				if (that.options.useTransition) that._unbind('webkitTransitionEnd');
 				else cancelFrame(that.aniTime);
 				that.steps = [];
+
 				that._pos(x, y);
 			}
 		}
@@ -411,6 +433,12 @@ iScroll.prototype = {
 
 			this.scroller.style[vendor + 'Transform'] = trnOpen + newX + 'px,' + newY + 'px' + trnClose + ' scale(' + scale + ')';
 
+      if (that.nestedChilds) {
+        this.nestedChilds.forEach(function (n) {
+  			  n.style[vendor + 'Transform'] = trnOpen + newX + 'px,' + newY + 'px' + trnClose + ' scale(' + scale + ')';
+        });
+      }
+      
 			if (that.options.onZoom) that.options.onZoom.call(that, e);
 			return;
 		}
@@ -447,6 +475,7 @@ iScroll.prototype = {
 		}
 
 		that.moved = true;
+
 		that._pos(newX, newY);
 		that.dirX = deltaX > 0 ? -1 : deltaX < 0 ? 1 : 0;
 		that.dirY = deltaY > 0 ? -1 : deltaY < 0 ? 1 : 0;
@@ -494,6 +523,13 @@ iScroll.prototype = {
 			
 			that.scroller.style[vendor + 'TransitionDuration'] = '200ms';
 			that.scroller.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + that.scale + ')';
+
+      if (that.nestedChilds) {
+        this.nestedChilds.forEach(function (n) {
+    			n.style[vendor + 'TransitionDuration'] = '200ms';
+    			n.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + that.scale + ')';
+        });
+      }
 			
 			that.zoomed = false;
 			that.refresh();
@@ -748,6 +784,13 @@ iScroll.prototype = {
 	_transitionTime: function (time) {
 		time += 'ms';
 		this.scroller.style[vendor + 'TransitionDuration'] = time;
+
+    if (that.nestedChilds) {
+      this.nestedChilds.forEach(function (n) {
+  	    n.style[vendor + 'TransitionDuration'] = time;
+      });
+    }
+    
 		if (this.hScrollbar) this.hScrollbarIndicator.style[vendor + 'TransitionDuration'] = time;
 		if (this.vScrollbar) this.vScrollbarIndicator.style[vendor + 'TransitionDuration'] = time;
 	},
@@ -853,6 +896,12 @@ iScroll.prototype = {
 
 		that.scroller.style[vendor + 'Transform'] = '';
 
+    if (that.nestedChilds) {
+      this.nestedChilds.forEach(function (n) {
+  		  n.style[vendor + 'Transform'] = '';
+      });
+    }
+    
 		// Remove the scrollbars
 		that.hScrollbar = false;
 		that.vScrollbar = false;
@@ -948,6 +997,13 @@ iScroll.prototype = {
 
 		if (!that.zoomed) {
 			that.scroller.style[vendor + 'TransitionDuration'] = '0';
+
+      if (that.nestedChilds) {
+        this.nestedChilds.forEach(function (n) {
+  			  n.style[vendor + 'TransitionDuration'] = '0';
+        });
+			}
+			
 			that._resetPos(200);
 		}
 	},
@@ -1053,6 +1109,14 @@ iScroll.prototype = {
 
 		that.scroller.style[vendor + 'TransitionDuration'] = time + 'ms';
 		that.scroller.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + scale + ')';
+
+    if (that.nestedChilds) {
+      this.nestedChilds.forEach(function (n) {
+    		n.style[vendor + 'TransitionDuration'] = time + 'ms';
+    		n.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + scale + ')';
+      });
+    }
+    
 		that.zoomed = false;
 	},
 	
