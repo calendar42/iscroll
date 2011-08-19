@@ -130,14 +130,16 @@ var m = Math,
 
     if (that.nestedChilds) {
   		that.nestedChilds.forEach(function (n) {
-    		// Set some default styles
-    		n.style[vendor + 'TransitionProperty'] = that.options.useTransform ? '-' + vendor.toLowerCase() + '-transform' : 'top left';
-    		n.style[vendor + 'TransitionDuration'] = '0';
-    		n.style[vendor + 'TransformOrigin'] = '0 0';
-    		if (that.options.useTransition) n.style[vendor + 'TransitionTimingFunction'] = 'cubic-bezier(0.33,0.66,0.66,1)';
+		    if (n && n.style) { 
+      		// Set some default styles
+      		n.style[vendor + 'TransitionProperty'] = that.options.useTransform ? '-' + vendor.toLowerCase() + '-transform' : 'top left';
+      		n.style[vendor + 'TransitionDuration'] = '0';
+      		n.style[vendor + 'TransformOrigin'] = '0 0';
+      		if (that.options.useTransition) n.style[vendor + 'TransitionTimingFunction'] = 'cubic-bezier(0.33,0.66,0.66,1)';
 		
-    		if (that.options.useTransform) n.style[vendor + 'Transform'] = trnOpen + '0,0' + trnClose;
-    		else n.style.cssText += ';position:absolute;top:0;left:0';
+      		if (that.options.useTransform) n.style[vendor + 'Transform'] = trnOpen + '0,0' + trnClose;
+      		else n.style.cssText += ';position:absolute;top:0;left:0';
+        }
   		});
     }
 
@@ -272,7 +274,9 @@ iScroll.prototype = {
 
       if (that.nestedChilds) {
         this.nestedChilds.forEach(function (n) {
-  			  n.style[vendor + 'Transform'] = trnOpen + x + 'px,' + y + 'px' + trnClose + ' scale(' + that.scale + ')';
+  		    if (n && n.style) { 
+  			    n.style[vendor + 'Transform'] = trnOpen + x + 'px,' + y + 'px' + trnClose + ' scale(' + that.scale + ')';
+  			  }
         });
       }
 		} else {
@@ -283,8 +287,10 @@ iScroll.prototype = {
 
       if (that.nestedChilds) {
         this.nestedChilds.forEach(function (n) {
-    			n.style.left = x + 'px';
-    			n.style.top = y + 'px';
+  		    if (n && n.style) { 
+      			n.style.left = x + 'px';
+      			n.style.top = y + 'px';
+          }
         });
       }
 		}
@@ -435,7 +441,9 @@ iScroll.prototype = {
 
       if (that.nestedChilds) {
         this.nestedChilds.forEach(function (n) {
-  			  n.style[vendor + 'Transform'] = trnOpen + newX + 'px,' + newY + 'px' + trnClose + ' scale(' + scale + ')';
+  		    if (n && n.style) { 
+  			    n.style[vendor + 'Transform'] = trnOpen + newX + 'px,' + newY + 'px' + trnClose + ' scale(' + scale + ')';
+  			  }
         });
       }
       
@@ -526,8 +534,10 @@ iScroll.prototype = {
 
       if (that.nestedChilds) {
         this.nestedChilds.forEach(function (n) {
-    			n.style[vendor + 'TransitionDuration'] = '200ms';
-    			n.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + that.scale + ')';
+  		    if (n && n.style) { 
+      			n.style[vendor + 'TransitionDuration'] = '200ms';
+      			n.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + that.scale + ')';
+  		    }
         });
       }
 			
@@ -787,7 +797,9 @@ iScroll.prototype = {
 
     if (that.nestedChilds) {
       this.nestedChilds.forEach(function (n) {
-  	    n.style[vendor + 'TransitionDuration'] = time;
+		    if (n && n.style) { 
+  	      n.style[vendor + 'TransitionDuration'] = time;
+  	    }
       });
     }
     
@@ -898,7 +910,9 @@ iScroll.prototype = {
 
     if (that.nestedChilds) {
       this.nestedChilds.forEach(function (n) {
-  		  n.style[vendor + 'Transform'] = '';
+	      if (n && n.style) { 
+  		    n.style[vendor + 'Transform'] = '';
+  		  }
       });
     }
     
@@ -1000,7 +1014,9 @@ iScroll.prototype = {
 
       if (that.nestedChilds) {
         this.nestedChilds.forEach(function (n) {
-  			  n.style[vendor + 'TransitionDuration'] = '0';
+  		    if (n && n.style) { 
+  			    n.style[vendor + 'TransitionDuration'] = '0';
+  			  }
         });
 			}
 			
@@ -1112,8 +1128,10 @@ iScroll.prototype = {
 
     if (that.nestedChilds) {
       this.nestedChilds.forEach(function (n) {
-    		n.style[vendor + 'TransitionDuration'] = time + 'ms';
-    		n.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + scale + ')';
+	      if (n && n.style) { 
+      		n.style[vendor + 'TransitionDuration'] = time + 'ms';
+      		n.style[vendor + 'Transform'] = trnOpen + that.x + 'px,' + that.y + 'px' + trnClose + ' scale(' + scale + ')';
+        }
       });
     }
     
