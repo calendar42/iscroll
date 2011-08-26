@@ -78,7 +78,7 @@ var m = Math,
 			fixedScrollbar: isAndroid,
 			hideScrollbar: isIDevice,
 			fadeScrollbar: isIDevice && has3d,
-			scrollbarClass: '',
+			scrollbarClass: 'iscroll-scroll-bar',
 
 			// Zoom
 			zoom: false,
@@ -148,11 +148,12 @@ var m = Math,
 		that.refresh();
 
 		that._bind(RESIZE_EV, window);
-		if (hasTouch || that.options.desktopDraggable ) {
+
+    if (hasTouch || that.options.desktopDraggable ) {
 		  that._bind(START_EV);
-		}
+    }
 		if (!hasTouch) {
-			that._bind('mouseout', that.wrapper);
+      // that._bind('mouseout', that.wrapper);
 			that._bind(WHEEL_EV);
 		}
 
@@ -175,12 +176,13 @@ iScroll.prototype = {
 	
 	handleEvent: function (e) {
 		var that = this;
-
-		if (that.options.dontScroll) { return; }
+    if (that.options.dontScroll) { return; }
 
 		switch(e.type) {
 			case START_EV:
 				if (!hasTouch && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
 				that._start(e);
 				break;
 			case MOVE_EV: that._move(e); break;
@@ -224,7 +226,7 @@ iScroll.prototype = {
 			if (that.options.scrollbarClass) bar.className = that.options.scrollbarClass + dir.toUpperCase();
 			else bar.style.cssText = 'position:absolute;z-index:100;' + (dir == 'h' ? 'height:7px;bottom:1px;left:2px;right:' + (that.vScrollbar ? '7' : '2') + 'px' : 'width:7px;bottom:' + (that.hScrollbar ? '7' : '2') + 'px;top:2px;right:1px');
 
-			bar.style.cssText += ';pointer-events:none;-' + vendor + '-transition-property:opacity;-' + vendor + '-transition-duration:' + (that.options.fadeScrollbar ? '350ms' : '0') + ';overflow:hidden;opacity:' + (that.options.hideScrollbar ? '0' : '1');
+      bar.style.cssText += ';-' + vendor + '-transition-property:opacity;-' + vendor + '-transition-duration:' + (that.options.fadeScrollbar ? '350ms' : '0') + ';overflow:hidden;opacity:' + (that.options.hideScrollbar ? '0' : '1');
 
 			that.wrapper.appendChild(bar);
 			that[dir + 'ScrollbarWrapper'] = bar;
@@ -234,11 +236,14 @@ iScroll.prototype = {
 			if (!that.options.scrollbarClass) {
 				bar.style.cssText = 'position:absolute;z-index:100;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.9);-' + vendor + '-background-clip:padding-box;-' + vendor + '-box-sizing:border-box;' + (dir == 'h' ? 'height:100%' : 'width:100%') + ';-' + vendor + '-border-radius:3px;border-radius:3px';
 			}
-			bar.style.cssText += ';pointer-events:none;-' + vendor + '-transition-property:-' + vendor + '-transform;-' + vendor + '-transition-timing-function:cubic-bezier(0.33,0.66,0.66,1);-' + vendor + '-transition-duration:0;-' + vendor + '-transform:' + trnOpen + '0,0' + trnClose;
+      bar.style.cssText += ';-' + vendor + '-transition-property:-' + vendor + '-transform;-' + vendor + '-transition-timing-function:cubic-bezier(0.33,0.66,0.66,1);-' + vendor + '-transition-duration:0;-' + vendor + '-transform:' + trnOpen + '0,0' + trnClose;
 			if (that.options.useTransition) bar.style.cssText += ';-' + vendor + '-transition-timing-function:cubic-bezier(0.33,0.66,0.66,1)';
 
 			that[dir + 'ScrollbarWrapper'].appendChild(bar);
 			that[dir + 'ScrollbarIndicator'] = bar;
+
+      // Bind the scrollbarIndicator for scrolling
+      that._bind(START_EV, that[dir + 'ScrollbarIndicator']);
 		}
 
 		if (dir == 'h') {
@@ -346,6 +351,7 @@ iScroll.prototype = {
 
 		if (that.options.useTransition || that.options.zoom) that._transitionTime(0);
 
+		that.scrollByIndicator = e.target === this.vScrollbarIndicator;
 		that.moved = false;
 		that.animating = false;
 		that.zoomed = false;
@@ -356,6 +362,10 @@ iScroll.prototype = {
 		that.dirX = 0;
 		that.dirY = 0;
 
+    if (that.scrollByIndicator) {
+      that.addClass(this.vScrollbarIndicator, 'active');
+    }
+    
 		// Gesture start
 		if (that.options.zoom && hasTouch && e.touches.length > 1) {
 			c1 = m.abs(e.touches[0].pageX-e.touches[1].pageX);
@@ -400,10 +410,17 @@ iScroll.prototype = {
 
 		if (that.options.onScrollStart) that.options.onScrollStart.call(that, e);
 
+
 		if (hasTouch || that.options.desktopDraggable ) {
   		that._bind(MOVE_EV);
-  		that._bind(END_EV);
-  		that._bind(CANCEL_EV);
+      that._bind(END_EV);
+      that._bind(CANCEL_EV);
+    }
+
+    if (that.scrollByIndicator) {
+      that._bind(MOVE_EV, window);
+      that._bind(END_EV, window);
+      that._bind(CANCEL_EV, window);
     }
 	},
 	
@@ -416,6 +433,28 @@ iScroll.prototype = {
 			newY = that.y + deltaY,
 			c1, c2, scale,
 			timestamp = e.timeStamp || (new Date()).getTime();
+
+    // Handle scrolling triggered by the scrollbar
+    if (this.scrollByIndicator) {
+			var diffX = this.scrollerW / this.wrapperW,
+    			diffY = this.scrollerH / this.wrapperH;
+          // diffY = (this.scroller.offsetHeight - this.vScrollbarIndicatorSize) / this.vScrollbarWrapper.offsetHeight;
+    			
+			deltaX = that.x - (deltaX * diffX);
+			deltaY = that.y - (deltaY * diffY);
+
+  		that.pointX = point.pageX;
+  		that.pointY = point.pageY;
+
+  		if (deltaX > 0) deltaX = 0;
+  		else if (deltaX < that.maxScrollX) deltaX = that.maxScrollX;
+
+  		if (deltaY > that.minScrollY) deltaY = that.minScrollY;
+  		else if (deltaY < that.maxScrollY) deltaY = that.maxScrollY;
+
+  		that.scrollTo(deltaX, deltaY, 0);
+      return;
+    }
 
 		if (that.options.onBeforeScrollMove) that.options.onBeforeScrollMove.call(that, e);
 
@@ -454,45 +493,44 @@ iScroll.prototype = {
 		that.pointX = point.pageX;
 		that.pointY = point.pageY;
 
-		// Slow down if outside of the boundaries
-		if (newX > 0 || newX < that.maxScrollX) {
-			newX = that.options.bounce ? that.x + (deltaX / 2) : newX >= 0 || that.maxScrollX >= 0 ? 0 : that.maxScrollX;
-		}
-		if (newY > that.minScrollY || newY < that.maxScrollY) { 
-			newY = that.options.bounce ? that.y + (deltaY / 2) : newY >= that.minScrollY || that.maxScrollY >= 0 ? that.minScrollY : that.maxScrollY;
-		}
+    // Slow down if outside of the boundaries
+    if (newX > 0 || newX < that.maxScrollX) {
+     newX = that.options.bounce ? that.x + (deltaX / 2) : newX >= 0 || that.maxScrollX >= 0 ? 0 : that.maxScrollX;
+    }
+    if (newY > that.minScrollY || newY < that.maxScrollY) { 
+     newY = that.options.bounce ? that.y + (deltaY / 2) : newY >= that.minScrollY || that.maxScrollY >= 0 ? that.minScrollY : that.maxScrollY;
+    }
 
-		if (that.absDistX < 6 && that.absDistY < 6) {
-			that.distX += deltaX;
-			that.distY += deltaY;
-			that.absDistX = m.abs(that.distX);
-			that.absDistY = m.abs(that.distY);
+    if (that.absDistX < 6 && that.absDistY < 6) {
+     that.distX += deltaX;
+     that.distY += deltaY;
+     that.absDistX = m.abs(that.distX);
+     that.absDistY = m.abs(that.distY);
+     return;
+    }
 
-			return;
-		}
-
-		// Lock direction
-		if (that.options.lockDirection) {
-			if (that.absDistX > that.absDistY + 5) {
-				newY = that.y;
-				deltaY = 0;
-			} else if (that.absDistY > that.absDistX + 5) {
-				newX = that.x;
-				deltaX = 0;
-			}
-		}
+    // Lock direction
+    if (that.options.lockDirection) {
+     if (that.absDistX > that.absDistY + 5) {
+       newY = that.y;
+       deltaY = 0;
+     } else if (that.absDistY > that.absDistX + 5) {
+       newX = that.x;
+       deltaX = 0;
+     }
+    }
 
 		that.moved = true;
 
 		that._pos(newX, newY);
-		that.dirX = deltaX > 0 ? -1 : deltaX < 0 ? 1 : 0;
-		that.dirY = deltaY > 0 ? -1 : deltaY < 0 ? 1 : 0;
-
-		if (timestamp - that.startTime > 300) {
-			that.startTime = timestamp;
-			that.startX = that.x;
-			that.startY = that.y;
-		}
+    that.dirX = deltaX > 0 ? -1 : deltaX < 0 ? 1 : 0;
+    that.dirY = deltaY > 0 ? -1 : deltaY < 0 ? 1 : 0;
+    
+    if (timestamp - that.startTime > 300) {
+     that.startTime = timestamp;
+     that.startX = that.x;
+     that.startY = that.y;
+    }
 		
 		if (that.options.onScrollMove) that.options.onScrollMove.call(that, e);
 	},
@@ -516,6 +554,12 @@ iScroll.prototype = {
 		that._unbind(MOVE_EV);
 		that._unbind(END_EV);
 		that._unbind(CANCEL_EV);
+
+    if (that.scrollByIndicator) {
+      that.removeClass(this.vScrollbarIndicator, 'active');
+    }
+
+    that._unbind(MOVE_EV, window);
 
 		if (that.options.onBeforeScrollEnd) that.options.onBeforeScrollEnd.call(that, e);
 
@@ -741,6 +785,20 @@ iScroll.prototype = {
 	 * Utilities
 	 *
 	 */
+
+  hasClass: function(ele,cls) {
+    return ele.className.match(new RegExp('(\\s|^)'+cls+'(\\s|$)'));
+  },
+  addClass: function (ele,cls) {
+	 if (!this.hasClass(ele,cls)) ele.className += " "+cls;
+  },
+  removeClass: function(ele,cls) {
+	 if (this.hasClass(ele,cls)) {
+	   var reg = new RegExp('(\\s|^)'+cls+'(\\s|$)');
+	   ele.className=ele.className.replace(reg,' ');
+	 }
+  },
+	 
 	_startAni: function () {
 		var that = this,
 			startX = that.x, startY = that.y,
@@ -928,6 +986,8 @@ iScroll.prototype = {
 		that._unbind(MOVE_EV);
 		that._unbind(END_EV);
 		that._unbind(CANCEL_EV);
+
+    that._unbind(MOVE_EV, window);
 		
 		if (that.options.hasTouch) {
 			that._unbind('mouseout', that.wrapper);
@@ -1090,6 +1150,8 @@ iScroll.prototype = {
 		this._unbind(MOVE_EV);
 		this._unbind(END_EV);
 		this._unbind(CANCEL_EV);
+
+    that._unbind(MOVE_EV, window);
 	},
 	
 	enable: function () {
