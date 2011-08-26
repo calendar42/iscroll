@@ -724,6 +724,34 @@ iScroll.prototype = {
 			wheelDeltaX = wheelDeltaY = -e.wheelDelta;
 		}
 		
+		// Implementing deltaMultiplier in order to correct the scroll behavior in different browsers (taken from SC.ScrollView of SproutCore)
+    // TODO: Would be nice to go to a 'self-learning' system like here : https://github.com/sproutcore/sproutcore/commit/4910f7c82dbe4ce1e23e52daa0ab90fa175dd337
+    // TODO: As we're not using the CSSTransforms on the Desktop, it's only implemented for !useTransform. Probably the deltaMultiplier is also useful for useTransform.
+    // FIXME: Make it stand-alone again! Now relying on SC to handle browser
+		if (!that.options.useTransform) {
+		  var deltaMultiplier = 1;
+		  var version = parseFloat(SC.browser.version);
+		   // Check Chrome first since it also responds to safari
+       if (!SC.browser.chrome) {
+         // Scrolling in Safari 5.0.1, which is huge for some reason
+         if (version >= 533.17 && version <= 533.19) {
+           deltaMultiplier = 0.004;
+         } else if (version >= 533.20 && version <= 533.22 && SC.browser.isMac) {
+           deltaMultiplier = 0.3;
+         } else if (version >= 533.20 && version <= 533.22 && SC.browser.isWindows) {
+           deltaMultiplier = 8;
+           // Scrolling in Safari 5
+         } else if (version < 533 || version >= 534) {
+           deltaMultiplier = 20;
+         }
+      } else if ( SC.browser.chrome ) {
+        deltaMultiplier = 2.5;
+      }
+      
+      wheelDeltaX = wheelDeltaX * deltaMultiplier;
+      wheelDeltaY = wheelDeltaY * deltaMultiplier;
+		}
+		
 		if (that.options.wheelAction == 'zoom') {
 			deltaScale = that.scale * Math.pow(2, 1/3 * (wheelDeltaY ? wheelDeltaY / Math.abs(wheelDeltaY) : 0));
 			if (deltaScale < that.options.zoomMin) deltaScale = that.options.zoomMin;
